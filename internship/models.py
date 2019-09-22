@@ -55,10 +55,9 @@ class Request(models.Model):
     title                  = models.CharField(max_length=31)
     comment                = models.TextField(null=True,blank=True)#text ==>comment
     state                  = models.IntegerField(default=0)
-    opinion                = models.BooleanField(default=False)
     agreementUploadedUrl   = models.TextField(null=True,blank=True)
     reqdate                = models.DateTimeField()
-    ######################reqhash                = models.TextField(null=True,blank=True)###############################
+    reqhash                = models.TextField(null=True,blank=True)
 
     def __str__(self):
             return "{} From : {}".format(
@@ -69,6 +68,7 @@ class Request(models.Model):
 class Opinion(models.Model):
     user         = models.ForeignKey(Users, on_delete=models.DO_NOTHING, related_name='Operson')
     request      = models.ForeignKey(Request, on_delete=models.CASCADE, related_name='Orequest')
+    opinion      = models.BooleanField(null=True,blank=True)
     seenDate     = models.DateTimeField(null=True,blank=True)
     opinionDate  = models.DateTimeField(null=True,blank=True)
     opinionText  = models.TextField(null=True,blank=True)

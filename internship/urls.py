@@ -7,4 +7,5 @@ urlpatterns = [
     path('request/',RequestInternShipView.as_view()),
     path('checkrequest/',CheckRequestView.as_view()),
     path('requestflow/',RequestFlowView.as_view()),
+    path('signup/internshiphead/',CreateAccountInternshipHeadView.as_view()),
 ]

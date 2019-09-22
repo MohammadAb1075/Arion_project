@@ -1,4 +1,5 @@
 import re
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import serializers
 from public.models import *
@@ -198,104 +199,118 @@ class OpinionEditSerializer(serializers.Serializer):
     seenDate = serializers.DateTimeField(required=False)
     opinionDate = serializers.DateTimeField(required=False)
     opinionText = serializers.CharField(required=False,allow_blank=True)
-    opinion = serializers.BooleanField()
+    opinion = serializers.BooleanField(required=True)
 
 
+    def validate(self, data):
+        print("***************",data['opinion'])
+        if data['opinion'] is None:
+                    raise serializers.ValidationError(
+                        "Opinion Is Empty!!!"
+                    )
 
+        for r in self.instance.user.roles.all():
+            r=str(r)
+            try:
 
+                if (r == 'FacultyTrainingStaff' and self.instance.request.state != 1) :
+                    op=Opinion.objects.get(Q(user__roles__role='DepartmentHead') & Q(request__student=self.instance.request.student))
+                    if op:
+                        if op.opinionDate:
+                            raise serializers.ValidationError(
+                                "You Can Not Comment"
+                            )
+
+                if (r == 'DepartmentHead' and self.instance.request.state != 2):
+                    op=Opinion.objects.get(Q(user__roles__role='UniversityTrainingStaff') & Q(request__student=self.instance.request.student))
+                    if op:
+                        if op.opinionDate:
+                            raise serializers.ValidationError(
+                                "You Can Not Comment"
+                            )
+
+            except:
+                pass
+
+        return data
 
 
     def update(self,instance,validated_data):
 
-
         if  'opinion' in  validated_data:
-            instance.opinionDate = timezone.now()
-            if validated_data['opinion'] == 1:
-                instance.request.state += 1
-                instance.request.save()
+
+            if validated_data['opinion'] == 1 :
+
+
+
+                if instance.request.state == 1 :
+                    u=Users.objects.get(roles__role='FacultyTrainingStaff')
+                    if instance.user == u:
+                        instance.request.state += 1
+                        instance.request.save()
+
+                    # if instance.request.state == 0 :
+                    #     instance.request.state = 2
+                    #     instance.request.save()
+
+
 
                 if instance.request.state == 2:
-                    r=Role.objects.get(role='DepartmentHead')
-                    u=Users.objects.get(roles=r)
-                    op=Opinion(
-                        user = u,
-                        request = instance.request,
-                    )
-                    op.save()
+                    u=Users.objects.get(roles__role='DepartmentHead')
+                    if instance.user == u:
+                        instance.request.state += 1
+                        instance.request.save()
+
+                    # if instance.request.state == 0 :
+                    #     instance.request.state = 3
+                    #     instance.request.save()
+
+                    if not  Opinion.objects.filter(Q(user=u) & Q(request=instance.request)):
+                        op=Opinion(
+                            user = u,
+                            request = instance.request,
+                        )
+                        op.save()
+
 
                 if instance.request.state == 3:
-                    r=Role.objects.get(role='UniversityTrainingStaff')
-                    u=Users.objects.get(roles=r)
-                    op=Opinion(
-                        user = u,
-                        request = instance.request,
-                    )
-                    op.save()
+
+                    u=Users.objects.get(roles__role='UniversityTrainingStaff')
+                    if instance.user == u:
+                        instance.request.state += 1
+                        instance.request.save()
+                    # if instance.request.state == 0 :
+                    #     instance.request.state = 4
+                    #     instance.request.save()
+
+                    if not  Opinion.objects.filter(Q(user=u) & Q(request=instance.request)):
+                        op=Opinion(
+                            user = u,
+                            request = instance.request,
+                        )
+                        op.save()
+
+                instance.opinion = 1
+                instance.save()
+
+
+            # if instance.request.state == 4:
+            #
+
 
             else:
-                # for r in instance.user.roles.all():
-                #     r=str(r)
-                #     if r == 'FacultyTrainingStaff':
-                #         instance.request.state = 1
-                #     if r == 'DepartmentHead':
-                #         instance.request.state = 2
-                #     if r == 'UniversityTrainingStaff':
-                #         instance.request.state = 3
-                #     # instance.request.opinion = 0
 
-                    instance.request.state = 0
-                    instance.request.save()
-
-
-
-
-
-            # else:
-            #     for r in instance.user.roles.all():
-            #         r=str(r)
-            #         if r == 'FacultyTrainingStaff':
-            #             instance.request.state = 1
-            #         if r == 'DepartmentHead':
-            #             instance.request.state = 2
-            #         if r == 'UniversityTrainingStaff':
-            #             instance.request.state = 3
-            #         instance.request.opinion = 0
-            #         instance.request.save()
-
-
+                instance.request.state = 0
+                instance.request.save()
 
 
         if  'opinionText' in  validated_data:
             instance.opinionText = validated_data['opinionText']
 
+
+        instance.opinionDate = timezone.now()
         instance.save()
         return instance
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -323,3 +338,54 @@ class RequestFlowSerializer(serializers.ModelSerializer):
     class Meta:
         model=Opinion
         fields='__all__'
+
+
+
+
+
+class RequestSerializer(serializers.ModelSerializer):
+    internshipPlace = InternShipPlaceInformation()
+    student = StudentInformationSerializer()
+    class Meta:
+        model = Request
+        fields = '__all__'
+
+class OpinionSerializer(serializers.ModelSerializer):
+    user = UsreInformationFlowSerializer()
+    request = RequestSerializer()
+    class Meta:
+        model=Opinion
+        fields='__all__'
+
+
+
+
+class SignUpInternShipSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=31)
+    last_name = serializers.CharField(max_length=31)
+    username = serializers.EmailField(max_length=31)
+    password = serializers.CharField(max_length=31)
+    phone = serializers.CharField(max_length=15)
+    email = serializers.EmailField()
+    # role =  serializers.CharField(max_length=31)
+    # departmentName = serializers.CharField(max_length=63)
+
+    def create(self, data):
+        # r=Role.objects.filter(Q(role=data['role']) & Q(department=d))[0]
+        u = Users(
+            first_name = data['first_name'],
+            last_name = data['last_name'],
+            username = data['username'],
+        )
+        u.save()
+        u.roles.add(Role.objects.get(role='InternshipHead'))
+        u.set_password(data['password'])
+        u.save()
+        ih = InternshipHead(
+            user = u,
+            phone = data['phone'],
+            email = data['email']
+        )
+        ih.save()
+
+        return ih
