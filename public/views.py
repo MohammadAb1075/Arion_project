@@ -31,12 +31,12 @@ class SignUpView(APIView):
             },
             status=status.HTTP_200_OK
             )
-
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
+        else:
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+ 
 
 class SignUpStudentView(APIView):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
