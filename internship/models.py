@@ -4,11 +4,12 @@ from public.models import Faculties,College,Major
 
 
 class InternshipHead(models.Model):
-    user  = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
-    phone = models.CharField(max_length=31)
-    email = models.EmailField()
-
-
+    user    = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
+    request = models.OneToOneField('internship.Request',on_delete=models.DO_NOTHING)
+    phone   = models.CharField(max_length=31)
+    email   = models.EmailField()
+    def __str__(self):
+        return self.user.first_name + ' ' + self.user.last_name
 
 class State(models.Model):
     namestate = models.CharField(max_length=63)
@@ -83,11 +84,11 @@ class InternShip(models.Model):
     internshiphead            = models.ForeignKey(InternshipHead, on_delete=models.DO_NOTHING)
     gtOpinion                 = models.ForeignKey(Opinion, on_delete=models.DO_NOTHING)
     guideTeacher              = models.ForeignKey('internship.Choosing', on_delete=models.DO_NOTHING )#choosing
-    studentFinalReport        = models.TextField()
-    studentObjectionText      = models.TextField()
-    studentObjectionDate      = models.DateTimeField()
-    supervisorReportUploadUrl = models.TextField()
-    internShipState           = models.BooleanField()
+    studentFinalReport        = models.TextField(null=True,blank=True)
+    studentObjectionText      = models.TextField(null=True,blank=True)
+    studentObjectionDate      = models.DateTimeField(null=True,blank=True)
+    supervisorReportUploadUrl = models.TextField(null=True,blank=True)
+    internShipState           = models.BooleanField(null=True,blank=True)
 
 
 
