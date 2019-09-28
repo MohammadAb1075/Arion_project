@@ -366,10 +366,11 @@ class SignUpInternShipSerializer(serializers.Serializer):
     last_name = serializers.CharField(max_length=31)
     username = serializers.EmailField(max_length=31)
     password = serializers.CharField(max_length=31)
-    phone = serializers.CharField(max_length=15)
-    email = serializers.EmailField()
-    # role =  serializers.CharField(max_length=31)
-    # departmentName = serializers.CharField(max_length=63)
+    phone = serializers.CharField(required=True, max_length=15)
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    # def validate(self, data):
+
 
     def create(self, data):
         # r=Role.objects.filter(Q(role=data['role']) & Q(department=d))[0]
@@ -379,14 +380,21 @@ class SignUpInternShipSerializer(serializers.Serializer):
             username = data['username'],
         )
         u.save()
-        u.roles.add(Role.objects.get(role='InternshipHead'))
-        u.set_password(data['password'])
-        u.save()
-        ih = InternshipHead(
-            user = u,
-            phone = data['phone'],
-            email = data['email']
-        )
-        ih.save()
+
+        try:
+            u.roles.add(Role.objects.get(Q(role='InternshipHead') & Q(department__departmentName=self.context['request'].student.major)))
+            u.set_password(data['password'])
+            u.save()
+            ih = InternshipHead(
+                user = u,
+                request = self.context['request']
+            )
+            if 'email' in data:
+                ih.email = data['email']
+
+            ih.save()
+
+        except:
+            u.delete()
 
         return ih

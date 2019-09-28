@@ -69,9 +69,9 @@ class RequestInternShipView(APIView):
                 serializer.save()
                 return Response(
                     {
-                        'Message' : 'Form completed',
+                        'Message' : 'Form Completed',
                     },
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_201_CREATED
                     )
             else:
                 return Response(
@@ -95,7 +95,7 @@ class RequestInternShipView(APIView):
 
                 return Response(
                     {
-                        'message': 'Credits Edited successfuly',
+                        'message': 'Credits Edited Successfuly',
                         'data': serializer.data
                     },
                     status=status.HTTP_200_OK
@@ -133,7 +133,7 @@ class RequestFlowView(APIView):
         try:
             req = Request.objects.get(student = student)
             if req.state == 4 :
-                req.reqhash = req.student.user.first_name + " " + req.student.user.last_name+" "+str(req.reqdate)
+                req.reqhash = req.student.user.first_name + " " + req.student.user.last_name + " " + str(req.reqdate)
                 req.reqhash = hashlib.md5(req.reqhash.encode()).hexdigest()
                 req.save()
                 return Response(
@@ -157,19 +157,43 @@ class RequestFlowView(APIView):
 
 class CreateAccountInternshipHeadView(APIView):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
-    def get(self, request):
-        opi=Request.objects.filter(state=4)
+    def get(self, request, userparameter):
+        try:
+            request=Request.objects.get(reqhash = userparameter)
+            serializer=RequestSerializer(instance = request)
+            return Response(
+                {
+                    'data' : serializer.data,
+                    'Message' : 'If this Information Is Correct, Create Your Account'
+                    },
+                status=status.HTTP_200_OK
+                )
+        except:
+            return Response(
+                {
+                    'Message' : 'The Hash Expression May Be Incorrect'
+                    },
+                status=status.HTTP_404_NOT_FOUND
+                )
 
 
-    def post(self, request):
-        serializer = SignUpInternShipSerializer(data = request.data)
+
+
+    def post(self, request, userparameter):
+        req=Request.objects.get(reqhash = userparameter)
+        serializer = SignUpInternShipSerializer(
+            data = request.data,
+            context = {
+                'request' : req
+            }
+        )
         if serializer.is_valid():
             serializer.save()
             return Response(
             {
-                'Message' : 'Account Create,Welcome',
+                'Message' : 'Account Create, Welcome',
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_201_CREATED
             )
 
         return Response(
@@ -203,13 +227,6 @@ class CheckRequestView(APIView):
                 elif str(r) == 'UniversityTrainingStaff':
                     opinion = Opinion.objects.filter(Q(user__roles__role='UniversityTrainingStaff') & Q(request__state=3))
 
-        # except:
-        #     return Response(
-        #         {
-        #             'message' : 'InAccessibility !!!'
-        #         },
-        #         status=status.HTTP_403_FORBIDDEN
-        #     )
 
             opinion_serializer = OpinionGetFilterSerializer(data=request.GET) #data=request.data
             if opinion_serializer.is_valid():

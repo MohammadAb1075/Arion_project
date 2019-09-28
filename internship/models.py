@@ -6,7 +6,7 @@ from public.models import Faculties,College,Major
 class InternshipHead(models.Model):
     user    = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
     request = models.OneToOneField('internship.Request',on_delete=models.DO_NOTHING)
-    phone   = models.CharField(max_length=31)
+    # phone   = models.CharField(max_length=31)
     email   = models.EmailField()
     def __str__(self):
         return self.user.first_name + ' ' + self.user.last_name
@@ -75,8 +75,8 @@ class Opinion(models.Model):
     opinionText  = models.TextField(null=True,blank=True)
 
     def __str__(self):
-        return "{} Request From {} To {}".format(self.request.title,self.request.student.user.first_name + ' ' + self.request.student.user.last_name,self.user.roles.all()[0])
-
+        # return "{} Request From {} To {}".format(self.request.title,self.request.student.user.first_name + ' ' + self.request.student.user.last_name,self.user.roles.all()[0])
+        return "{} Request From {} To {}".format(self.request.title,self.request.student.user.first_name + ' ' + self.request.student.user.last_name,self.user.first_name + ' ' + self.user.last_name)
 
 
 class InternShip(models.Model):

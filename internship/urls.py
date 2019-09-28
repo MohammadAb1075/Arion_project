@@ -7,6 +7,6 @@ urlpatterns = [
     path('request/',RequestInternShipView.as_view()),
     # path('checkrequest/',CheckRequestView.as_view()),
     path('requestflow/',RequestFlowView.as_view()),
-    path('signup/internshiphead/',CreateAccountInternshipHeadView.as_view()),
+    re_path('signup/internshiphead/(?P<userparameter>\w+)',CreateAccountInternshipHeadView.as_view()),
     re_path('checkrequest/(?P<userparameter>\d{0,10000000})', CheckRequestView.as_view())
 ]
