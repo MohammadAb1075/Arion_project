@@ -142,16 +142,17 @@ class RequestFormInternShipSerializer(serializers.Serializer):
 
         if 'comment' in data:
             request.comment = data['comment']
+
         r=Role.objects.get(role='FacultyTrainingStaff')
         u=Users.objects.get(roles=r)
+
         try:
             opinion=Opinion(
                 user = u,
                 request = request,
             )
-
             opinion.save()
-            return request
+
         except:
             request.delete()
             isp.delete()
@@ -159,6 +160,7 @@ class RequestFormInternShipSerializer(serializers.Serializer):
                 'Error!!!'
             )
 
+        return request
 
 
 
@@ -203,7 +205,6 @@ class OpinionEditSerializer(serializers.Serializer):
 
 
     def validate(self, data):
-        print("***************",data['opinion'])
         if data['opinion'] is None:
                     raise serializers.ValidationError(
                         "Opinion Is Empty!!!"
@@ -256,7 +257,7 @@ class OpinionEditSerializer(serializers.Serializer):
 
 
                 if instance.request.state == 2:
-                    u=Users.objects.get(roles__role='DepartmentHead')
+                    u=Users.objects.get(Q(roles__role='DepartmentHead') & Q(roles__department__departmentName=instance.request.student.major))
                     if instance.user == u:
                         instance.request.state += 1
                         instance.request.save()
@@ -274,8 +275,8 @@ class OpinionEditSerializer(serializers.Serializer):
 
 
                 if instance.request.state == 3:
-
-                    u=Users.objects.get(roles__role='UniversityTrainingStaff')
+                    u=Users.objects.get(Q(roles__role='UniversityTrainingStaff') & Q(roles__department__departmentName=instance.request.student.major))
+                    # u=Users.objects.get(roles__role='UniversityTrainingStaff')
                     if instance.user == u:
                         instance.request.state += 1
                         instance.request.save()
@@ -351,12 +352,12 @@ class RequestSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class OpinionSerializer(serializers.ModelSerializer):
-    user = UsreInformationFlowSerializer()
+    # user = UsreInformationFlowSerializer()
     request = RequestSerializer()
     class Meta:
-        model=Opinion
-        fields='__all__'
-
+        model = Opinion
+        # fields = '__all__'
+        exclude = ['user']
 
 
 

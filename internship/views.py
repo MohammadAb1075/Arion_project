@@ -128,25 +128,24 @@ class RequestFlowView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
-
-
-
-
         serializer = RequestFlowSerializer(instance=opinion,many=True)
 
-        req = Request.objects.get(student = student)
-        if req.state == 4 :
-            req.reqhash = req.student.user.first_name+" "+req.student.user.last_name+" "+str(req.reqdate)
-            req.reqhash = hashlib.md5(req.reqhash.encode()).hexdigest()
-            req.save()
-            return Response(
-                {
-                    'message' : 'The Approval Process Has Been Completed Successfully',
+        try:
+            req = Request.objects.get(student = student)
+            if req.state == 4 :
+                req.reqhash = req.student.user.first_name + " " + req.student.user.last_name+" "+str(req.reqdate)
+                req.reqhash = hashlib.md5(req.reqhash.encode()).hexdigest()
+                req.save()
+                return Response(
+                    {
+                        'message' : 'The Approval Process Has Been Completed Successfully',
 
-                    'data' : serializer.data
-                },
-                status=status.HTTP_200_OK
-            )
+                        'data' : serializer.data
+                    },
+                    status=status.HTTP_200_OK
+                )
+        except:
+            pass
 
         return Response(
             {
@@ -160,7 +159,6 @@ class CreateAccountInternshipHeadView(APIView):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
     def get(self, request):
         opi=Request.objects.filter(state=4)
-        print("***********8***************",opi)
 
 
     def post(self, request):
@@ -181,28 +179,10 @@ class CreateAccountInternshipHeadView(APIView):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 class CheckRequestView(APIView):
     authentication_classes = (CsrfExemptSessionAuthentication, BasicAuthentication)
 
-    def get(self,request):
+    def get(self,request,userparameter):
         if type(request.user) is AnonymousUser:
             return Response(
                 {
@@ -211,71 +191,75 @@ class CheckRequestView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+        try:
+            for r in request.user.roles.all():
 
-        for r in request.user.roles.all():
-            r=str(r)
+                if str(r) == 'FacultyTrainingStaff':
+                    opinion = Opinion.objects.filter(request__state=1)
+                elif str(r) == 'DepartmentHead':
+                    # opinion = Opinion.objects.filter(Q(user__roles__role='FacultyTrainingStaff') & Q(request__state__iexact=2))
+                    opinion = Opinion.objects.filter(Q(user__roles__role='DepartmentHead') & Q(request__state=2)& (Q(user__roles__department__departmentName=r.department.all()[0])))
+                    # opinion = Opinion.objects.filter(Q(request=request))
+                elif str(r) == 'UniversityTrainingStaff':
+                    opinion = Opinion.objects.filter(Q(user__roles__role='UniversityTrainingStaff') & Q(request__state=3))
 
-            if r == 'FacultyTrainingStaff':
-                opinion = Opinion.objects.filter(request__state=1)
+        # except:
+        #     return Response(
+        #         {
+        #             'message' : 'InAccessibility !!!'
+        #         },
+        #         status=status.HTTP_403_FORBIDDEN
+        #     )
 
-            elif r == 'DepartmentHead':
-                opinion = Opinion.objects.filter(Q(user__roles__role='FacultyTrainingStaff') & Q(request__state__iexact=2))
+            opinion_serializer = OpinionGetFilterSerializer(data=request.GET) #data=request.data
+            if opinion_serializer.is_valid():
 
-            elif r == 'UniversityTrainingStaff':
-                opinion = Opinion.objects.filter(Q(user__roles__role='UniversityTrainingStaff') & Q(request__state=3))
+                if 'first_name' in opinion_serializer.data:
+                    opinion = opinion.filter(
+                        request__student__user__first_name=opinion_serializer.data['first_name']
+                    )
+                if 'last_name' in opinion_serializer.data:
+                    opinion = opinion.filter(
+                        request__student__user__last_name=opinion_serializer.data['last_name']
+                    )
+                if 'username' in opinion_serializer.data:
+                    opinion = opinion.filter(
+                        request__student__user__username=opinion_serializer.data['username']
+                    )
+                if 'title' in opinion_serializer.data:
+                    opinion = opinion.filter(
+                        request__title=opinion_serializer.data['title']
+                    )
 
-            else:
+                serializer = OpinionSerializer(instance=opinion,many=True)
+                for op in opinion:
+                    if op.seenDate is None:
+                        op.seenDate=timezone.now()
+                        op.save()
+
+
                 return Response(
                     {
-                        'message' : 'InAccessibility !!!'
+                        'data' : serializer.data
                     },
-                    status=status.HTTP_403_FORBIDDEN
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    opinion_serializer.errors,
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-        opinion_serializer = OpinionGetFilterSerializer(data=request.GET) #data=request.data
-        if opinion_serializer.is_valid():
-
-            if 'first_name' in opinion_serializer.data:
-                opinion = opinion.filter(
-                    request__student__user__first_name=opinion_serializer.data['first_name']
-                )
-            if 'last_name' in opinion_serializer.data:
-                opinion = opinion.filter(
-                    request__student__user__last_name=opinion_serializer.data['last_name']
-                )
-            if 'username' in opinion_serializer.data:
-                opinion = opinion.filter(
-                    request__student__user__username=opinion_serializer.data['username']
-                )
-            if 'title' in opinion_serializer.data:
-                opinion = opinion.filter(
-                    request__title=opinion_serializer.data['title']
-                )
-
-
-            # serializer=OpinionSerializers(instance=opinion,many=True)
-            serializer=OpinionSerializer(instance=opinion,many=True)
-
-            for op in opinion:
-                if op.seenDate is None:
-                    op.seenDate=timezone.now()
-                    op.save()
-
-
+        except:
             return Response(
                 {
-                    'data' : serializer.data
+                    'message' : 'InAccessibility !!!'
                 },
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                opinion_serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_403_FORBIDDEN
             )
 
 
-    def put(self, request):
+    def put(self, request, userparameter):
 
         if type(request.user) is AnonymousUser:
             return Response(
@@ -285,8 +269,16 @@ class CheckRequestView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         else:
-            opinion = Opinion.objects.get(Q(request = request.data['id']) & Q(user=request.user))
-            serializer = OpinionEditSerializer(instance=opinion,data=request.data)
+            try:
+                opinion = Opinion.objects.get(Q(request = request.data['id']) & Q(user=request.user))
+                serializer = OpinionEditSerializer(instance=opinion,data=request.data)
+            except:
+                return Response(
+                    {
+                    'message': 'You Can''t comment'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
             if serializer.is_valid():
                 serializer.save()
@@ -301,3 +293,29 @@ class CheckRequestView(APIView):
                     serializer.errors,
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+
+
+    # def put(self, request, userparameter):
+    #     users = Users.objects.all()
+    #
+    #     try:
+    #         opinion = Opinion.objects.get( Q(request = int(userparameter)) & Q(user=request.user))
+    #         serializer = OpinionEditSerializer(instance=opinion,data=request.data)
+    #
+    #     except ValueError:
+    #         print("there is no userparameters")
+    #
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(
+    #             {
+    #             'message': 'Your Opinion Was Recorded Successfuly',
+    #             },
+    #             status=status.HTTP_200_OK
+    #         )
+    #     else:
+    #         return Response(
+    #             serializer.errors,
+    #             status=status.HTTP_400_BAD_REQUEST
+    #         )
