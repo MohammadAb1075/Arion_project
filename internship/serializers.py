@@ -185,7 +185,7 @@ class OpinionSerializers(serializers.ModelSerializer):
 
 
 
-class OpinionGetFilterSerializer(serializers.Serializer):
+class InformationGetFilterSerializer(serializers.Serializer):
     first_name = serializers.CharField(
         required=False, allow_blank=False, max_length=100)
     last_name = serializers.CharField(
@@ -215,7 +215,10 @@ class OpinionEditSerializer(serializers.Serializer):
             try:
 
                 if (r == 'FacultyTrainingStaff' and self.instance.request.state != 1) :
-                    op=Opinion.objects.get(Q(user__roles__role='DepartmentHead') & Q(request__student=self.instance.request.student))
+                    op=Opinion.objects.get(
+                        Q(user__roles__role='DepartmentHead') &
+                        Q(request__student=self.instance.request.student))
+
                     if op:
                         if op.opinionDate:
                             raise serializers.ValidationError(
@@ -223,12 +226,20 @@ class OpinionEditSerializer(serializers.Serializer):
                             )
 
                 if (r == 'DepartmentHead' and self.instance.request.state != 2):
-                    op=Opinion.objects.get(Q(user__roles__role='UniversityTrainingStaff') & Q(request__student=self.instance.request.student))
+                    op=Opinion.objects.get(
+                        Q(user__roles__role='UniversityTrainingStaff') &
+                        Q(request__student=self.instance.request.student))
+
                     if op:
                         if op.opinionDate:
                             raise serializers.ValidationError(
                                 "You Can Not Comment"
                             )
+
+                if (r == 'UniversityTrainingStaff' and self.instance.request.state != 3):
+                    raise serializers.ValidationError(
+                        "You Can Not Comment"
+                    )
 
             except:
                 pass
@@ -237,35 +248,25 @@ class OpinionEditSerializer(serializers.Serializer):
 
 
     def update(self,instance,validated_data):
-
         if  'opinion' in  validated_data:
 
             if validated_data['opinion'] == 1 :
 
-
-
                 if instance.request.state == 1 :
                     u=Users.objects.get(roles__role='FacultyTrainingStaff')
+
                     if instance.user == u:
                         instance.request.state += 1
                         instance.request.save()
-
-                    # if instance.request.state == 0 :
-                    #     instance.request.state = 2
-                    #     instance.request.save()
-
-
 
                 if instance.request.state == 2:
-                    u=Users.objects.get(Q(roles__role='DepartmentHead') & Q(roles__department__departmentName=instance.request.student.major))
+                    u=Users.objects.get(
+                        Q(roles__role='DepartmentHead') &
+                        Q(roles__department__departmentName=instance.request.student.major))
+
                     if instance.user == u:
                         instance.request.state += 1
                         instance.request.save()
-
-                    # if instance.request.state == 0 :
-                    #     instance.request.state = 3
-                    #     instance.request.save()
-
                     if not  Opinion.objects.filter(Q(user=u) & Q(request=instance.request)):
                         op=Opinion(
                             user = u,
@@ -275,15 +276,13 @@ class OpinionEditSerializer(serializers.Serializer):
 
 
                 if instance.request.state == 3:
-                    u=Users.objects.get(Q(roles__role='UniversityTrainingStaff') & Q(roles__department__departmentName=instance.request.student.major))
-                    # u=Users.objects.get(roles__role='UniversityTrainingStaff')
+                    u=Users.objects.get(
+                        Q(roles__role='UniversityTrainingStaff') &
+                        Q(roles__department__departmentName=instance.request.student.major))
+
                     if instance.user == u:
                         instance.request.state += 1
                         instance.request.save()
-                    # if instance.request.state == 0 :
-                    #     instance.request.state = 4
-                    #     instance.request.save()
-
                     if not  Opinion.objects.filter(Q(user=u) & Q(request=instance.request)):
                         op=Opinion(
                             user = u,
@@ -291,19 +290,29 @@ class OpinionEditSerializer(serializers.Serializer):
                         )
                         op.save()
 
+
+                # if instance.request.state == 5:
+                #     u=Users.objects.get(
+                #         Q(roles__role='DepartmentHead') &
+                #         Q(roles__department__departmentName=instance.request.student.major))
+                #     instance.request.state += 1
+                #     instance.request.save()
+                #
+                #     if not  Opinion.objects.filter(Q(user=u) & Q(request=instance.request)):
+                #         op=Opinion(
+                #             user = u,
+                #             request = instance.request,
+                #         )
+                #         op.save()
+
+
                 instance.opinion = 1
                 instance.save()
-
-
-            # if instance.request.state == 4:
-            #
-
 
             else:
 
                 instance.request.state = 0
                 instance.request.save()
-
 
         if  'opinionText' in  validated_data:
             instance.opinionText = validated_data['opinionText']
@@ -369,11 +378,7 @@ class SignUpInternShipSerializer(serializers.Serializer):
     phone = serializers.CharField(required=True, max_length=15)
     email = serializers.EmailField(required=False, allow_blank=True)
 
-    # def validate(self, data):
-
-
     def create(self, data):
-        # r=Role.objects.filter(Q(role=data['role']) & Q(department=d))[0]
         u = Users(
             first_name = data['first_name'],
             last_name = data['last_name'],
@@ -382,7 +387,11 @@ class SignUpInternShipSerializer(serializers.Serializer):
         u.save()
 
         try:
-            u.roles.add(Role.objects.get(Q(role='InternshipHead') & Q(department__departmentName=self.context['request'].student.major)))
+            request=self.context['request']
+            u.roles.add(Role.objects.get(
+                Q(role='InternshipHead') &
+                Q(department__departmentName=request.student.major)))
+
             u.set_password(data['password'])
             u.save()
             ih = InternshipHead(
@@ -391,10 +400,86 @@ class SignUpInternShipSerializer(serializers.Serializer):
             )
             if 'email' in data:
                 ih.email = data['email']
-
             ih.save()
 
         except:
             u.delete()
 
         return ih
+
+        # try:
+        #     request=self.context['request']
+        #     u.roles.add(Role.objects.get(
+        #         Q(role='InternshipHead') &
+        #         Q(department__departmentName=request.student.major)))
+        #
+        #     u.set_password(data['password'])
+        #     u.save()
+        #     ih = InternshipHead(
+        #         user = u,
+        #         request = self.context['request']
+        #     )
+        #     if 'email' in data:
+        #         ih.email = data['email']
+        #     ih.save()
+        #
+        #     request.state = 5
+        #     request.save()
+        #     usr=Users.objects.get(
+        #         Q(roles__role='DepartmentHead') &
+        #         Q(roles__department__departmentName=request.student.major))
+        #     op=Opinion(
+        #         user = usr,
+        #         request = request
+        #     ).save()
+        #
+        # except:
+        #     u.delete()
+        #
+        # return ih
+
+
+class InternshipHeadInformation(serializers.ModelSerializer):
+    user = UsreInformation()
+    request = RequestSerializer()
+    class Meta:
+        model = InternshipHead
+        fields = '__all__'
+
+
+class ChoosingSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Choosing
+        fields = '__all__'
+
+
+class DepartmentOfTeacherInformation(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        exclude = ['faculty']
+
+
+class RoleOfTeacherInformation(serializers.ModelSerializer):
+    department = DepartmentOfTeacherInformation(many=True)
+    class Meta:
+        model = Role
+        fields = '__all__'
+
+class TeacherInformation(serializers.ModelSerializer):
+    roles = RoleOfTeacherInformation(many=True)
+    class Meta:
+        model = Users
+        fields = ['id','first_name','last_name','username','roles']
+
+
+
+class ChoosingGuideTeacherSerializer(serializers.ModelSerializer):
+    choice = serializers.BooleanField(required=False)
+
+
+    def create(self, data):
+        ch = Choosing(
+            user =  self.context['teacher'],
+            student =  self.context['request'].student
+        )
