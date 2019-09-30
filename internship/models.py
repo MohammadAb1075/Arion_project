@@ -6,7 +6,6 @@ from public.models import Faculties,College,Major
 class InternshipHead(models.Model):
     user    = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
     request = models.OneToOneField('internship.Request',on_delete=models.DO_NOTHING)
-    # phone   = models.CharField(max_length=31)
     email   = models.EmailField()
     def __str__(self):
         return self.user.first_name + ' ' + self.user.last_name
@@ -118,10 +117,10 @@ class WeeklyReport(models.Model):
 
 
 class Choosing(models.Model):
-    user       = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
-    student    = models.ForeignKey(Student, on_delete=models.DO_NOTHING)
-    gtOpinion  = models.ForeignKey(Opinion, on_delete=models.DO_NOTHING)
-
+    user      = models.ForeignKey(Users, on_delete=models.DO_NOTHING)
+    student   = models.ForeignKey(Student, on_delete=models.DO_NOTHING)
+    gtOpinion = models.ForeignKey(Opinion, on_delete=models.DO_NOTHING)
+    choice    = models.BooleanField(null=True,blank=True) 
 
 
 class Student_InternShip(models.Model):
